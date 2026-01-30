@@ -1,0 +1,40 @@
+[package]
+name = "webdav-adapter"
+version = "1.0.0"
+edition = "2021"
+rust-version = "1.75"
+license = "Apache-2.0"
+description = "A WebDAV server that acts as an adapter between WebDAV clients and the FileBrowser API."
+publish = false
+
+[[bin]]
+name = "webdav-adapter"
+path = "src/main.rs"
+
+[lib]
+name = "webdav_adapter"
+path = "src/lib.rs"
+
+[dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util"] }
+hyper = { version = "1", features = ["http1", "server"] }
+hyper-util = { version = "0.1", features = ["tokio"] }
+http-body-util = "0.1"
+bytes = "1"
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "stream"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+time = { version = "0.3", features = ["formatting", "parsing", "serde-well-known", "macros"] }
+httpdate = "1"
+base64 = "0.22"
+percent-encoding = "2"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util", "sync"] }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true

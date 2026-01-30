@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  filebrowser:
+    image: filebrowser/filebrowser:s6
+    container_name: filebrowser
+    ports:
+      - "127.0.0.1:8080:80"
+    environment:
+      PUID: "${PUID:-1000}"
+      PGID: "${PGID:-1000}"
+    volumes:
+      - ./srv:/srv
+      - ./database:/database
+      - ./config:/config
+    restart: unless-stopped
+
+  webdav-adapter:
+    image: ghcr.io/noiseonwires/filebrowser-webdav-adapter:latest
+    # build: .
+    container_name: webdav-adapter
+    environment:
+      - FILEBROWSER_URL=http://filebrowser:80
+      - LISTEN_ADDR=:8081
+      - WEBDAV_PREFIX=/webdav
+      - DEBUG=false
+    ports:
+      - "127.0.0.1:8081:8081"
+    depends_on:
+      - filebrowser
+    restart: unless-stopped

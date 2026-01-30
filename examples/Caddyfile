@@ -1,0 +1,59 @@
+# Caddyfile for FileBrowser with WebDAV adapter
+#
+# Caddy automatically obtains and renews TLS certificates via ACME (Let's Encrypt)
+# Just replace files.example.com with your domain
+
+files.example.com {
+    # WebDAV adapter - handle /webdav/* requests
+    # Note: Use 'handle' not 'handle_path' to preserve the /webdav prefix
+    # The adapter must be configured with WEBDAV_PREFIX=/webdav
+    handle /webdav/* {
+        reverse_proxy localhost:8081 {
+            # Disable buffering for streaming
+            flush_interval -1
+            
+            # Pass headers
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+            
+            # Timeouts for large file transfers
+            transport http {
+                read_timeout 3600s
+                write_timeout 3600s
+            }
+        }
+    }
+
+    # FileBrowser - handle all other requests
+    handle {
+        reverse_proxy localhost:8080 {
+            # Disable buffering for streaming
+            flush_interval -1
+            
+            # Pass headers
+            header_up Host {host}
+            header_up X-Real-IP {remote_host}
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+            
+            # Timeouts for large file transfers
+            transport http {
+                read_timeout 3600s
+                write_timeout 3600s
+            }
+        }
+    }
+
+    # Increase max request body size for large uploads (10GB)
+    request_body {
+        max_size 10GB
+    }
+
+    # Logging (optional)
+    log {
+        output file /var/log/caddy/files.example.com.log
+        format json
+    }
+}
