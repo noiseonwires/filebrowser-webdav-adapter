@@ -4,6 +4,8 @@
 # Just replace files.example.com with your domain
 
 files.example.com {
+        
+
     # WebDAV adapter - handle /webdav/* requests
     # Note: Use 'handle' not 'handle_path' to preserve the /webdav prefix
     # The adapter must be configured with WEBDAV_PREFIX=/webdav
@@ -51,9 +53,64 @@ files.example.com {
         max_size 10GB
     }
 
-    # Logging (optional)
+    # Logging (required for fail2ban/crowdsec integration)
     log {
         output file /var/log/caddy/files.example.com.log
         format json
     }
 }
+
+# =============================================================================
+# fail2ban integration for advanced brute force protection
+# =============================================================================
+#
+# --- FileBrowser Web Login ---
+#
+# Create /etc/fail2ban/filter.d/caddy-filebrowser.conf:
+# ------------------------------------------------------
+# [Definition]
+# # Match JSON log format for failed logins (403 status on /api/login)
+# failregex = "request":\{[^}]*"uri":"/api/login"[^}]*\}[^}]*"status":40[13],.*"client_ip":"<HOST>"
+# ignoreregex =
+#
+# Create /etc/fail2ban/jail.d/caddy-filebrowser.conf:
+# ------------------------------------------------------
+# [caddy-filebrowser]
+# enabled = true
+# port = http,https
+# filter = caddy-filebrowser
+# logpath = /var/log/caddy/files.example.com.log
+# maxretry = 5
+# findtime = 300
+# bantime = 3600
+# action = iptables-multiport[name=caddy-filebrowser, port="http,https", protocol=tcp]
+#
+# This will ban IPs for 1 hour after 5 failed login attempts within 5 minutes.
+#
+# --- WebDAV Adapter (Basic Auth) ---
+#
+# Create /etc/fail2ban/filter.d/caddy-webdav.conf:
+# ------------------------------------------------------
+# [Definition]
+# # Match JSON log format for 401 responses on /webdav/ paths (failed Basic Auth)
+# failregex = "request":\{[^}]*"uri":"/webdav[^"]*"[^}]*\}[^}]*"status":401,.*"client_ip":"<HOST>"
+# ignoreregex =
+#
+# Create /etc/fail2ban/jail.d/caddy-webdav.conf:
+# ------------------------------------------------------
+# [caddy-webdav]
+# enabled = true
+# port = http,https
+# filter = caddy-webdav
+# logpath = /var/log/caddy/files.example.com.log
+# maxretry = 5
+# findtime = 300
+# bantime = 3600
+# action = iptables-multiport[name=caddy-webdav, port="http,https", protocol=tcp]
+#
+# This will ban IPs for 1 hour after 5 failed WebDAV auth attempts within 5 minutes.
+#
+# Note: WebDAV clients authenticate on EVERY request using Basic Auth, unlike the
+# FileBrowser web UI which uses session cookies. A legitimate client syncing many
+# files will make many authenticated requests, so be careful with maxretry values.
+# =============================================================================
